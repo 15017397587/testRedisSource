@@ -13,8 +13,7 @@ int main(int argc, char**argv){
 	int testTimes = atoi(argv[1]);
 	for(int i = 0; i < testTimes; i++){
 		t = zslRandomLevel();
-		printf("%d\n", t);
-		statis[t - 1] = statis[t - 1] + 1;
+		statis[t - 1]++;
 	}
 	char *offsetStr;
 	for(int i = ZSKIPLIST_MAXLEVEL; i > 0; i--){
