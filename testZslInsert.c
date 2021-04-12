@@ -8,6 +8,8 @@
 #define ZSKIPLIST_MAXLEVEL 32
 #define ZSKIPLIST_P 0.25
 
+typedef void (*dynamicPrintFunc)(char*, zskiplistNode*, int);
+
 zskiplist *zslCreate(void);
 zskiplistNode *zslInsert(zskiplist *zsl, double score, robj *obj);
 int zslRandomLevel(void);
@@ -16,7 +18,10 @@ zskiplistNode *zslCreateNode(int level, double score, robj *obj);
 //show way
 void view1(zskiplist *zsl);
 void view2(zskiplist *zsl);
-void viewShowOneLine(int level,zskiplistNode **levelt, char *s1, char *s2, char *s3);
+void viewShowOneLineConst(int level,zskiplistNode **levelt, char *s1, char *s2);
+void viewShowOneLineDynamic(int level,zskiplistNode **levelt, char *s1, dynamicPrintFunc func);
+void lineDynamicShowSpan(char *pOutBuf, zskiplistNode *n, int level);
+
 
 int main(int argc, char**argv){
 	if(argc < 3) return 1;
@@ -125,51 +130,40 @@ void view2(zskiplist *zsl){
 	//print header
 	printf(outBuf);
 	
-	viewShowOneLine(level, levelt,
-				"               ↓  ",
-				"                            ",
-				"                            ");
+	viewShowOneLineConst(level, levelt, "               ↓  ","");
 	
 	levelt[0] = zsl->header->level[0].forward;
 	while(levelt[0]){
-		viewShowOneLine(level, levelt,
+		viewShowOneLineConst(level, levelt,
 				"____________________________",
-				"____________________________",
-				"                            ");
-		viewShowOneLine(level, levelt,
+				"____________________________");
+		viewShowOneLineConst(level, levelt,
 				sprintf(lineBuf1, "| Addr  = %p        ", levelt[0]) ? lineBuf1 : "",
-				"                             ",
-				"                            ");
-
-		viewShowOneLine(level, levelt,
+				"");
+		viewShowOneLineConst(level, levelt,
 				sprintf(lineBuf1, "| score = %f         ", levelt[0]->score) ? lineBuf1 : "",
-				"                             ",
-				"                            ");
-		viewShowOneLine(level, levelt,
-				sprintf(lineBuf1, "| value = %s ", (levelt[0]->obj ? (char *)levelt[0]->obj->ptr : "")) ? lineBuf1 : "",
-				"                             ",
-				"                            ");
+				"");
+		viewShowOneLineConst(level, levelt,
+				sprintf(lineBuf1, "| obj   = %s ", (levelt[0]->obj ? (char *)levelt[0]->obj->ptr : "")) ? lineBuf1 : "",
+				"");
 
-		viewShowOneLine(level, levelt,
+		viewShowOneLineDynamic(level, levelt,
 				sprintf(lineBuf1, "| span  = %d                ", levelt[0]->level[0].span) ? lineBuf1 : "",
-				levelt[0] == levelt[1] ? (sprintf(lineBuf2, "    span  = %d                ", levelt[1]->level[1].span) ? lineBuf2 : "") : "",
-				"                            ");
-		viewShowOneLine(level, levelt,
+				lineDynamicShowSpan);
+		viewShowOneLineConst(level, levelt,
 				sprintf(lineBuf1, "￣￣￣￣￣￣￣￣￣￣￣￣￣￣") ? lineBuf1 : "",
-				"￣￣￣￣￣￣￣￣￣￣￣￣￣￣",
-				"                            ");
+				"￣￣￣￣￣￣￣￣￣￣￣￣￣￣");
 
 		for(int i = level - 1; i > 0; i--){
 			//if level synced,do forward
-			if(levelt[i] == levelt[i -1]) levelt[i] = levelt[i]->level[i].forward;
+			if(levelt[i] == levelt[i -1] && levelt[i] == levelt[0]) levelt[i] = levelt[i]->level[i].forward;
 		}
 		levelt[0] = levelt[0]->level[0].forward;
 	
 		if(levelt[0]){
-			viewShowOneLine(level, levelt,
-				"               ↑↓  ",
-				"               ↓  ",
-				"                            ");
+			viewShowOneLineConst(level, levelt,
+				"               ↑↓           ",
+				"               ↓            ");
 		}
 
 		if(!levelt[0]){
@@ -181,7 +175,8 @@ void view2(zskiplist *zsl){
 	}
 }
 
-void viewShowOneLine(int level,zskiplistNode **levelt, char *s1, char *s2, char *s3){
+
+void viewShowOneLineConst(int level,zskiplistNode **levelt, char *s1, char *s2){
 	int i;
 	char outBuf[4096];
 	outBuf[0] = '\0';
@@ -196,8 +191,31 @@ void viewShowOneLine(int level,zskiplistNode **levelt, char *s1, char *s2, char 
 			if(levelt[i] == levelt[0]){
 				sprintf(outBuf, "%s%s", outBuf, s2);
 			}
-			if(levelt[i] != levelt[0]){
-				sprintf(outBuf, "%s%s", outBuf, s3);
+		}
+
+		if(i == (level - 1)){
+			sprintf(outBuf, "%s\n", outBuf);
+		}	
+	}
+	//print line
+	printf(outBuf);	
+}
+
+
+void viewShowOneLineDynamic(int level,zskiplistNode **levelt, char *s1, dynamicPrintFunc func){
+	int i;
+	char outBuf[4096];
+	outBuf[0] = '\0';
+	//make line
+	for(i = 0; i < level; i++){
+		if(i == 0) *outBuf = '\0'; 
+
+		if(i == 0){
+			sprintf(outBuf, "%s%s", outBuf, s1);
+		}
+		if(i != 0){
+			if(levelt[i] == levelt[0] && func){
+				func(outBuf, levelt[i], i);
 			}
 		}
 
@@ -207,6 +225,11 @@ void viewShowOneLine(int level,zskiplistNode **levelt, char *s1, char *s2, char 
 	}
 	//print line
 	printf(outBuf);	
+}
+
+void lineDynamicShowSpan(char *pOutBuf, zskiplistNode *n, int level){
+	sprintf(pOutBuf, "%s    span  = %d                ", pOutBuf, n->level[level].span);
+	//levelt[0] == levelt[1] ? (sprintf(lineBuf2, "    span  = %d                ", levelt[1]->level[1].span) ? lineBuf2 : "") : ""
 }
 
 /*
