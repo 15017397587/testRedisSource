@@ -20,4 +20,7 @@ make testZslInsert
 ./testZslInsert 1.0 a 0.5 b 2.0 c
 
 4.测试Redis dict插入并画出结构图
+make testDictAdd
+
+测试示例：
 ./testDictAdd 1 a 2 b 3 c 4 d 5 e 6 f 7 g 8 h 9 i 10 j
