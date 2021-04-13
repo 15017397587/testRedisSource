@@ -1,16 +1,18 @@
 #include "dict.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 
 unsigned int dictIntHashFunctionDup(const void *k);
+int keyCompareDup(void *privdata, const void *key1, const void *key2);
 void viewHt(dictht *ht, int number);
 
 dictType testDictType = {
     dictIntHashFunctionDup,            /* hash function */
     NULL,                       /* key dup */
     NULL,                       /* val dup */
-    NULL,      /* key compare */
+    keyCompareDup,      /* key compare */
     NULL,          /* key destructor */
     NULL          /* val destructor */
 };
@@ -65,7 +67,7 @@ void viewHt(dictht *ht, int number){
 
 unsigned int dictIntHashFunctionDup(const void *k)
 {
-    unsigned int key = *((unsigned int *)k);
+    unsigned int key = atoi((char *)k);
     key += ~(key << 15);
     key ^=  (key >> 10);
     key +=  (key << 3);
@@ -74,3 +76,14 @@ unsigned int dictIntHashFunctionDup(const void *k)
     key ^=  (key >> 16);
     return key;
 }
+
+int keyCompareDup(void *privdata, const void *key1, const void *key2){
+	if(!key1 || !key2) return 1;
+	
+	int ikey1 = atoi((char *)key1);
+	int ikey2 = atoi((char *)key2);
+	if( ikey1 == ikey2 ) return 1;
+	
+	return 0;
+}
+
